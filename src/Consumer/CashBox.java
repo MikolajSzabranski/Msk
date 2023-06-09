@@ -5,17 +5,23 @@ import Producer.Client;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Created by Stanislaw on 08.05.2018.
  */
-public class CashBox {
+public class CashBox extends AtomicReference<CashBox> {
   int timeToNext;
   int queue;
   int speed;
   CashBoxType type;
   int maxLength;
   private Random random;
+
+  public int getMaxLength() {
+    return maxLength;
+  }
+
   public static List<CashBox> FASTS = new ArrayList<>();
   public static List<CashBox> STANDARDS = new ArrayList<>();
 

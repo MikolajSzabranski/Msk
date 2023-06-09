@@ -14,6 +14,7 @@
  */
 package Producer;
 
+import Consumer.CashBox;
 import Consumer.CashBoxType;
 import hla.rti1516e.*;
 import hla.rti1516e.encoding.EncoderFactory;
@@ -32,6 +33,8 @@ import java.io.File;
 import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 
 
 public class ClientFederate
@@ -246,6 +249,26 @@ public class ClientFederate
 		Client client = new Client();
 		while( fedamb.isRunning )
 		{
+			CashBox selected;
+			if (Objects.equals(client.type, String.valueOf(CashBoxType.STANDARD))) {
+				selected = CashBox.STANDARDS.get(0);
+				int max = CashBox.STANDARDS.get(0).getMaxLength();
+				CashBox.STANDARDS.forEach(cashBox -> {
+					if (cashBox.getQueue() < max) {
+						selected.set(cashBox);
+					}
+				});
+			}else {
+				selected = CashBox.FASTS.get(0);
+				int max = CashBox.FASTS.get(0).getMaxLength();
+				CashBox.FASTS.forEach(cashBox -> {
+					if (cashBox.getQueue() < max) {
+						selected.set(cashBox);
+					}
+				});
+			}
+			selected.incQueue();
+
 			// update ProductsStorage parameters max and available to current values
 			AttributeHandleValueMap attributes = rtiamb.getAttributeHandleValueMapFactory().create(2);
 
