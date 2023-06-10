@@ -1,7 +1,6 @@
 package Consumer;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -12,20 +11,19 @@ public class CashBox extends AtomicReference<CashBox> {
   public static int TIME_TO_NEXT = 1;
   int queueLen;
   int speed;
-  CashBoxType type;
+  public CashBoxType type;
   int maxLength;
-  private Random random;
+  private static final Random RANDOM = new Random();
 
   public int getMaxLength() {
     return maxLength;
   }
 
-  public static List<CashBox> FASTS = new ArrayList<>();
-  public static List<CashBox> STANDARDS = new ArrayList<>();
+  public static ArrayList<CashBox> FASTS = new ArrayList<>();
+  public static ArrayList<CashBox> STANDARDS = new ArrayList<>();
 
   public CashBox(CashBoxType type) {
-    queueLen = 0;
-    random = new Random();
+    this.queueLen = 0;
     this.type = type;
     this.maxLength = type == CashBoxType.STANDARD ? 15 : 10;
     this.speed = type == CashBoxType.STANDARD ? 30000 : 10000;
@@ -45,7 +43,7 @@ public class CashBox extends AtomicReference<CashBox> {
 
   public int consume() {
     TIME_TO_NEXT = generateTimeToNext();
-    int count = random.nextInt(15) + 1;
+    int count = RANDOM.nextInt(15) + 1;
     System.out.println("I want to consume " + count + ". Next I'll be consuming in " + TIME_TO_NEXT);
     return count;
   }
@@ -55,6 +53,6 @@ public class CashBox extends AtomicReference<CashBox> {
   }
 
   private int generateTimeToNext() {
-    return random.nextInt(10) + 1;
+    return RANDOM.nextInt(10) + 1;
   }
 }

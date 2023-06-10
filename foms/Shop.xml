@@ -48,6 +48,17 @@
 					<order>Receive</order>
 					<semantics>Max długość kolejki</semantics>
 				</attribute>
+				<attribute>
+					<name>queueLen</name>
+					<dataType>HLAinteger32BE</dataType>
+					<updateType>Static</updateType>
+					<updateCondition>On Change</updateCondition>
+					<ownership>Divest</ownership>
+					<sharing>PublishSubscribe</sharing>
+					<transportation>HLAreliable</transportation>
+					<order>Receive</order>
+					<semantics>Obecna długość kolejki</semantics>
+				</attribute>
 			</objectClass>
 			<objectClass>
 				<name>Customer</name>

@@ -9,13 +9,13 @@ import java.util.Random;
  */
 public class Client {
   int productsNumber;
-  String type;
+  CashBoxType type;
   public static int NEXT_CLIENT_APPEAR;
   private static final Random RANDOM = new Random();
 
   public Client(double currentTime) {
     this.productsNumber = generateRandom();
-    this.type = String.valueOf(productsNumber < 5 ? CashBoxType.FAST : CashBoxType.STANDARD);
+    this.type = productsNumber < 5 ? CashBoxType.FAST : CashBoxType.STANDARD;
     NEXT_CLIENT_APPEAR = (int) (generateRandom() + currentTime);
   }
 
@@ -31,11 +31,15 @@ public class Client {
     this.productsNumber = productsNumber;
   }
 
-  public String getType() {
+  public String getTypeToString() {
+    return type.toString();
+  }
+
+  public CashBoxType getType() {
     return type;
   }
 
-  public void setType(String type) {
+  public void setType(CashBoxType type) {
     this.type = type;
   }
 

@@ -59,6 +59,7 @@ public class ClientFederate
 	protected AttributeHandle cashBoxTypeHandle;
 	protected AttributeHandle cashBoxSpeedHandle;
 	protected AttributeHandle cashBoxMaxLengthHandle;
+	protected AttributeHandle cashBoxQueueLenHandle;
 	protected AttributeHandle cashBoxAvailableHandle;
 	protected InteractionClassHandle addClientToQueue;
 
@@ -286,8 +287,8 @@ public class ClientFederate
 			HLAinteger32BE productsNumberValue = encoderFactory.createHLAinteger32BE(client.getProductsNumber());
 			attributes.put(productsNumberHandle, productsNumberValue.toByteArray());
 
-			HLAASCIIstring typeValue = encoderFactory.createHLAASCIIstring(client.getType());
-			attributes.put(cashBoxTypeHandle, typeValue.toByteArray());
+//			HLAASCIIstring typeValue = encoderFactory.createHLAASCIIstring(client.getTypeToString());
+//			attributes.put(cashBoxTypeHandle, typeValue.toByteArray());
 
 			rtiamb.updateAttributeValues(objectHandle, attributes, generateTag());
 			advanceTime(1);
@@ -356,11 +357,13 @@ public class ClientFederate
 		this.cashBoxTypeHandle = rtiamb.getAttributeHandle(cashBoxHandle, "type");
 		this.cashBoxSpeedHandle = rtiamb.getAttributeHandle(cashBoxHandle, "speed");
 		this.cashBoxMaxLengthHandle = rtiamb.getAttributeHandle(cashBoxHandle, "maxLength");
+		this.cashBoxQueueLenHandle = rtiamb.getAttributeHandle(cashBoxHandle, "queueLen");
 		// package the information into a handle set
 		attributes = rtiamb.getAttributeHandleSetFactory().create();
 		attributes.add(cashBoxTypeHandle);
 		attributes.add(cashBoxSpeedHandle);
 		attributes.add(cashBoxMaxLengthHandle);
+		attributes.add(cashBoxQueueLenHandle);
 		rtiamb.subscribeObjectClassAttributes(cashBoxHandle, attributes);
 
 //		publish AddProducts Interaction

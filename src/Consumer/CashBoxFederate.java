@@ -17,10 +17,7 @@ package Consumer;
 import hla.rti1516e.*;
 import hla.rti1516e.encoding.EncoderFactory;
 import hla.rti1516e.encoding.HLAinteger32BE;
-import hla.rti1516e.exceptions.FederatesCurrentlyJoined;
-import hla.rti1516e.exceptions.FederationExecutionAlreadyExists;
-import hla.rti1516e.exceptions.FederationExecutionDoesNotExist;
-import hla.rti1516e.exceptions.RTIexception;
+import hla.rti1516e.exceptions.*;
 import hla.rti1516e.time.HLAfloat64Interval;
 import hla.rti1516e.time.HLAfloat64Time;
 import hla.rti1516e.time.HLAfloat64TimeFactory;
@@ -31,6 +28,8 @@ import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 public class CashBoxFederate
@@ -52,6 +51,7 @@ public class CashBoxFederate
 	protected AttributeHandle cashBoxTypeHandle;
 	protected AttributeHandle cashBoxSpeedHandle;
 	protected AttributeHandle cashBoxMaxLengthHandle;
+	protected AttributeHandle cashBoxQueueLenHandle;
 	protected AttributeHandle storageMaxHandle;
 	protected ParameterHandle productsNumberHandle;
 	protected AttributeHandle storageAvailableHandle;
@@ -207,10 +207,13 @@ public class CashBoxFederate
 		for (int i = 0; i < 5; i++) {
 			CashBox.FASTS.add(new CashBox(CashBoxType.FAST));
 		}
+		ArrayList<CashBox> x = new ArrayList<>();
 		for (int i = 0; i < 5; i++) {
 			CashBox.STANDARDS.add(new CashBox(CashBoxType.STANDARD));
 		}
-		while( fedamb.isRunning )
+		CashBox va = new CashBox(CashBoxType.STANDARD);
+		System.out.println(va + "\n" + va.getQueueLen() + "\n" + va.type);
+		while (fedamb.isRunning)
 		{
 //			int consumed = cashBox.consume();
 //			if(storageAvailable - consumed >= 0 ) {
@@ -224,9 +227,12 @@ public class CashBoxFederate
 //			{
 //				log("Consuming canceled because of lack of products.");
 //			}
+
+			doUpdateCashBoxes();
+
 			// 9.3 request a time advance and wait until we get it
 			advanceTime(CashBox.TIME_TO_NEXT);
-			log("Time Advanced to " + fedamb.federateTime);
+			log("Time Advanced to " + fedamb.federateTime + "");
 		}
 
 
@@ -254,6 +260,31 @@ public class CashBoxFederate
 		{
 			log( "Didn't destroy federation, federates still joined" );
 		}
+	}
+
+	private void doUpdateCashBoxes() {
+		System.out.println("\tNajwiększe kolejki:");
+		updateCashBoxes(CashBox.FASTS);
+		updateCashBoxes(CashBox.STANDARDS);
+	}
+
+	private void updateCashBoxes(List<CashBox> list) {
+		AtomicInteger maximum = new AtomicInteger();
+		list.forEach(cashBox -> {
+			AttributeHandleValueMap attributes = null;
+			try {
+				attributes = rtiamb.getAttributeHandleValueMapFactory().create(1);
+			} catch (FederateNotExecutionMember | NotConnected e) {
+				throw new RuntimeException(e);
+			}
+
+			if (cashBox.getQueueLen() > maximum.get()){
+				maximum.set(cashBox.getQueueLen());
+			}
+			HLAinteger32BE cashBoxQueueLenValue = encoderFactory.createHLAinteger32BE(cashBox.getQueueLen());
+			attributes.put(cashBoxQueueLenHandle, cashBoxQueueLenValue.toByteArray());
+		});
+		System.out.println("\t\t" + list.get(0).type + " : " + maximum);
 	}
 
 	////////////////////////////////////////////////////////////////////////////
@@ -306,11 +337,13 @@ public class CashBoxFederate
 		this.cashBoxTypeHandle = rtiamb.getAttributeHandle(cashBoxHandle, "type");
 		this.cashBoxSpeedHandle = rtiamb.getAttributeHandle(cashBoxHandle, "speed");
 		this.cashBoxMaxLengthHandle = rtiamb.getAttributeHandle(cashBoxHandle, "maxLength");
+		this.cashBoxQueueLenHandle = rtiamb.getAttributeHandle(cashBoxHandle, "queueLen");
 		// package the information into a handle set
 		AttributeHandleSet attributes = rtiamb.getAttributeHandleSetFactory().create();
 		attributes.add(cashBoxTypeHandle);
 		attributes.add(cashBoxSpeedHandle);
 		attributes.add(cashBoxMaxLengthHandle);
+		attributes.add(cashBoxQueueLenHandle);
 		rtiamb.publishObjectClassAttributes(cashBoxHandle, attributes);
 
 		//subscribe
