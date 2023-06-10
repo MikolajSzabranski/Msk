@@ -225,7 +225,7 @@ public class CashBoxFederate
 //				log("Consuming canceled because of lack of products.");
 //			}
 			// 9.3 request a time advance and wait until we get it
-//			advanceTime(cashBox.getTimeToNext());
+			advanceTime(CashBox.TIME_TO_NEXT);
 			log("Time Advanced to " + fedamb.federateTime);
 		}
 

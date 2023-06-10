@@ -46,7 +46,7 @@
 					<sharing>PublishSubscribe</sharing>
 					<transportation>HLAreliable</transportation>
 					<order>Receive</order>
-					<semantics>max długość kolejki</semantics>
+					<semantics>Max długość kolejki</semantics>
 				</attribute>
 			</objectClass>
 			<objectClass>

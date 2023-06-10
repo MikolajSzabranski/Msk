@@ -10,11 +10,17 @@ import java.util.Random;
 public class Client {
   int productsNumber;
   String type;
-  private static Random random;
+  public static int NEXT_CLIENT_APPEAR;
+  private static final Random RANDOM = new Random();
 
-  public Client() {
-    this.productsNumber = random.nextInt(15)+1;
+  public Client(double currentTime) {
+    this.productsNumber = generateRandom();
     this.type = String.valueOf(productsNumber < 5 ? CashBoxType.FAST : CashBoxType.STANDARD);
+    NEXT_CLIENT_APPEAR = (int) (generateRandom() + currentTime);
+  }
+
+  private int generateRandom() {
+    return RANDOM.nextInt(15) + 1;
   }
 
   public int getProductsNumber() {
@@ -34,10 +40,10 @@ public class Client {
   }
 
   public Random getRandom() {
-    return random;
+    return RANDOM;
   }
 
   public int generateTimeToNext() {
-    return random.nextInt(10) + 1;
+    return RANDOM.nextInt(10) + 1;
   }
 }

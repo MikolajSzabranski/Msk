@@ -33,8 +33,9 @@ import java.io.File;
 import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicReference;
 
 
 public class ClientFederate
@@ -57,6 +58,7 @@ public class ClientFederate
 	protected ObjectClassHandle cashBoxHandle;
 	protected AttributeHandle cashBoxTypeHandle;
 	protected AttributeHandle cashBoxSpeedHandle;
+	protected AttributeHandle cashBoxMaxLengthHandle;
 	protected AttributeHandle cashBoxAvailableHandle;
 	protected InteractionClassHandle addClientToQueue;
 
@@ -246,29 +248,38 @@ public class ClientFederate
 		// here is where we do the meat of our work. in each iteration, we will
 		// update the attribute values of the object we registered, and will
 		// send an interaction.
-		Client client = new Client();
+		List<Client> clients = new ArrayList<>();
+		clients.add(new Client(fedamb.federateTime));
+		Client client = null;
 		while( fedamb.isRunning )
 		{
-			CashBox selected;
-			if (Objects.equals(client.type, String.valueOf(CashBoxType.STANDARD))) {
-				selected = CashBox.STANDARDS.get(0);
-				int max = CashBox.STANDARDS.get(0).getMaxLength();
-				CashBox.STANDARDS.forEach(cashBox -> {
-					if (cashBox.getQueue() < max) {
-						selected.set(cashBox);
-					}
-				});
-			}else {
-				selected = CashBox.FASTS.get(0);
-				int max = CashBox.FASTS.get(0).getMaxLength();
-				CashBox.FASTS.forEach(cashBox -> {
-					if (cashBox.getQueue() < max) {
-						selected.set(cashBox);
-					}
-				});
+			if (fedamb.federateTime >= Client.NEXT_CLIENT_APPEAR) {
+				clients.add(new Client(fedamb.federateTime));
 			}
-			selected.incQueue();
-
+			if (!clients.isEmpty()) {
+				client = clients.get(0);
+				CashBox selected;
+				if (Objects.equals(client.type, String.valueOf(CashBoxType.STANDARD)) && !CashBox.STANDARDS.isEmpty()) {
+					selected = CashBox.STANDARDS.get(0);
+					int max = selected.getMaxLength();
+					CashBox.STANDARDS.forEach(cashBox -> {
+						if (cashBox.getQueueLen() < max) {
+							selected.set(cashBox);
+						}
+					});
+					selected.incQueue();
+				} else if (!CashBox.FASTS.isEmpty()) {
+					selected = CashBox.FASTS.get(0);
+					int max = selected.getMaxLength();
+					CashBox.FASTS.forEach(cashBox -> {
+						if (cashBox.getQueueLen() < max) {
+							selected.set(cashBox);
+						}
+					});
+					selected.incQueue();
+				}
+				clients.remove(0);
+			}
 			// update ProductsStorage parameters max and available to current values
 			AttributeHandleValueMap attributes = rtiamb.getAttributeHandleValueMapFactory().create(2);
 
@@ -289,8 +300,8 @@ public class ClientFederate
 //			parameterHandleValueMap.put(addProductsNumberHandle, productsNumber.toByteArray());
 //			rtiamb.sendInteraction(addClientToQueue, parameterHandleValueMap, generateTag());
 			// 9.3 request a time advance and wait until we get it
-			advanceTime(client.generateTimeToNext());
-			log( "Time Advanced to " + fedamb.federateTime );
+//			advanceTime(client.generateTimeToNext());
+//			log( "Time Advanced to " + fedamb.federateTime );
 		}
 
 
@@ -342,13 +353,15 @@ public class ClientFederate
 
 		//subscribe cashbox
 		this.cashBoxHandle = rtiamb.getObjectClassHandle("HLAobjectRoot.CashRegister");
-		this.cashBoxTypeHandle = rtiamb.getAttributeHandle(customerHandle, "type");
-		this.cashBoxSpeedHandle = rtiamb.getAttributeHandle(customerHandle, "speed");
+		this.cashBoxTypeHandle = rtiamb.getAttributeHandle(cashBoxHandle, "type");
+		this.cashBoxSpeedHandle = rtiamb.getAttributeHandle(cashBoxHandle, "speed");
+		this.cashBoxMaxLengthHandle = rtiamb.getAttributeHandle(cashBoxHandle, "maxLength");
 		// package the information into a handle set
 		attributes = rtiamb.getAttributeHandleSetFactory().create();
-		attributes.add(customerTypeHandle);
-		attributes.add(productsNumberHandle);
-		rtiamb.subscribeObjectClassAttributes(customerHandle, attributes);
+		attributes.add(cashBoxTypeHandle);
+		attributes.add(cashBoxSpeedHandle);
+		attributes.add(cashBoxMaxLengthHandle);
+		rtiamb.subscribeObjectClassAttributes(cashBoxHandle, attributes);
 
 //		publish AddProducts Interaction
 		String iname = "HLAinteractionRoot.CustomerToQueue";
