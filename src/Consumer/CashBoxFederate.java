@@ -207,12 +207,9 @@ public class CashBoxFederate
 		for (int i = 0; i < 5; i++) {
 			CashBox.FASTS.add(new CashBox(CashBoxType.FAST));
 		}
-		ArrayList<CashBox> x = new ArrayList<>();
 		for (int i = 0; i < 5; i++) {
 			CashBox.STANDARDS.add(new CashBox(CashBoxType.STANDARD));
 		}
-		CashBox va = new CashBox(CashBoxType.STANDARD);
-		System.out.println(va + "\n" + va.getQueueLen() + "\n" + va.type);
 		while (fedamb.isRunning)
 		{
 //			int consumed = cashBox.consume();

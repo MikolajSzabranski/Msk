@@ -260,7 +260,7 @@ public class ClientFederate
 			if (!clients.isEmpty()) {
 				client = clients.get(0);
 				CashBox selected;
-				if (Objects.equals(client.type, String.valueOf(CashBoxType.STANDARD)) && !CashBox.STANDARDS.isEmpty()) {
+				if (Objects.equals(client.type, CashBoxType.STANDARD) && !CashBox.STANDARDS.isEmpty()) {
 					selected = CashBox.STANDARDS.get(0);
 					int max = selected.getMaxLength();
 					CashBox.STANDARDS.forEach(cashBox -> {
