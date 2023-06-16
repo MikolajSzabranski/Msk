@@ -126,7 +126,7 @@ public class CashBoxFederate
 			    (new File("foms/Shop.xml")).toURI().toURL(),
 			};
 
-			rtiamb.createFederationExecution( "ProducerConsumerFederation", modules );
+			rtiamb.createFederationExecution( "ShopFederation", modules );
 			log( "Created Federation" );
 		}
 		catch( FederationExecutionAlreadyExists exists )
@@ -146,7 +146,7 @@ public class CashBoxFederate
 
 		rtiamb.joinFederationExecution( federateName,            // name for the federate
 		                                "CashBox",   // federate type
-		                                "ProducerConsumerFederation"     // name of federation
+		                                "ShopFederation"     // name of federation
 		                                 );           // modules we want to add
 
 		log( "Joined Federation as " + federateName );
@@ -205,10 +205,14 @@ public class CashBoxFederate
 		// 10. do the main simulation loop //
 		/////////////////////////////////////
 		for (int i = 0; i < 5; i++) {
-			CashBox.FASTS.add(new CashBox(CashBoxType.FAST));
+			CashBox cb = new CashBox(CashBoxType.FAST);
+			CashBox.FASTS.add(cb);
+			publishCashBox(cb);
 		}
 		for (int i = 0; i < 5; i++) {
-			CashBox.STANDARDS.add(new CashBox(CashBoxType.STANDARD));
+			CashBox cb = new CashBox(CashBoxType.STANDARD);
+			CashBox.STANDARDS.add(cb);
+			publishCashBox(cb);
 		}
 		while (fedamb.isRunning)
 		{
@@ -257,6 +261,16 @@ public class CashBoxFederate
 		{
 			log( "Didn't destroy federation, federates still joined" );
 		}
+	}
+
+	private void publishCashBox(CashBox cb) throws ObjectClassNotPublished, ObjectClassNotDefined, SaveInProgress, RestoreInProgress, FederateNotExecutionMember, NotConnected, RTIinternalError, AttributeNotDefined, AttributeNotOwned, ObjectInstanceNotKnown {
+		ObjectInstanceHandle rtiCashBox = rtiamb.registerObjectInstance(cashBoxHandle);
+		AttributeHandleValueMap map = rtiamb.getAttributeHandleValueMapFactory().create(4);
+		map.put(cashBoxTypeHandle, encoderFactory.createHLAinteger32BE(cb.type.ordinal()).toByteArray());
+		map.put(cashBoxSpeedHandle, encoderFactory.createHLAinteger32BE(cb.speed).toByteArray());
+		map.put(cashBoxMaxLengthHandle, encoderFactory.createHLAinteger32BE(cb.maxLength).toByteArray());
+		map.put(cashBoxQueueLenHandle, encoderFactory.createHLAinteger32BE(cb.queueLen).toByteArray());
+		rtiamb.updateAttributeValues(rtiCashBox, map, generateTag());
 	}
 
 	private void doUpdateCashBoxes() {
