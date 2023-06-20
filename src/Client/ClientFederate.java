@@ -12,11 +12,16 @@
  *   (that goes for your lawyer as well)
  *
  */
-package Consumer;
+package Client;
 
+import CashBox.CashBoxType;
 import hla.rti1516e.*;
 import hla.rti1516e.encoding.EncoderFactory;
-import hla.rti1516e.exceptions.*;
+import hla.rti1516e.encoding.HLAinteger32BE;
+import hla.rti1516e.exceptions.FederatesCurrentlyJoined;
+import hla.rti1516e.exceptions.FederationExecutionAlreadyExists;
+import hla.rti1516e.exceptions.FederationExecutionDoesNotExist;
+import hla.rti1516e.exceptions.RTIexception;
 import hla.rti1516e.time.HLAfloat64Interval;
 import hla.rti1516e.time.HLAfloat64Time;
 import hla.rti1516e.time.HLAfloat64TimeFactory;
@@ -26,49 +31,47 @@ import java.io.File;
 import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
+
+import static CashBox.CashBox.FAST_CASH_BOX_SPEED;
+import static CashBox.CashBox.STANDARD_CASH_BOX_SPEED;
 
 
-public class CashBoxFederate {
+public class ClientFederate {
   /**
    * The sync point all federates will sync up on before starting
    */
   public static final String READY_TO_RUN = "ReadyToRun";
+  public static List<Client> CLIENTS = new ArrayList<>();
 
   //----------------------------------------------------------
   //                   INSTANCE VARIABLES
   //----------------------------------------------------------
   private RTIambassador rtiamb;
-  private CashBoxFederateAmbassador fedamb;  // created when we connect
+  private ClientFederateAmbassador fedamb;  // created when we connect
   private HLAfloat64TimeFactory timeFactory; // set when we join
   protected EncoderFactory encoderFactory;     // set when we join
 
   // caches of handle types - set once we join a federation
-  protected ObjectClassHandle storageHandle;
   protected ObjectClassHandle customerHandle;
-  protected InteractionClassHandle addClientToQueueHandle;
-  protected InteractionClassHandle customerOutHandle;
-  protected ParameterHandle addClientToQueueTypeHandle;
-  protected ParameterHandle customerOutTypeHandle;
   protected AttributeHandle customerTypeHandle;
-  protected AttributeHandle productsNumberHandle2;
+  protected AttributeHandle productsNumberHandle;
   protected ObjectClassHandle cashBoxHandle;
   protected AttributeHandle cashBoxTypeHandle;
   protected AttributeHandle cashBoxSpeedHandle;
   protected AttributeHandle cashBoxMaxLengthHandle;
   protected AttributeHandle cashBoxQueueLenHandle;
-  protected AttributeHandle storageMaxHandle;
-  protected ParameterHandle productsNumberHandle;
-  protected AttributeHandle storageAvailableHandle;
-  protected InteractionClassHandle getClientToQueueHandle;
-  public static boolean RUNNING = true;
+  protected AttributeHandle cashBoxAvailableHandle;
+  protected InteractionClassHandle addClientToQueueHandle;
+  protected InteractionClassHandle customerOutHandle;
+
   protected int storageMax = 0;
   protected int storageAvailable = 0;
   //----------------------------------------------------------
   //                      CONSTRUCTORS
-  //----------------------------------------------------------
 
+  //----------------------------------------------------------
   //----------------------------------------------------------
   //                    INSTANCE METHODS
   //----------------------------------------------------------
@@ -77,168 +80,8 @@ public class CashBoxFederate {
    * This is just a helper method to make sure all logging it output in the same form
    */
   private void log(String message) {
-    System.out.println("ConsumerFederate   : " + message);
+    System.out.println("ProducerFederate   : " + message);
   }
-
-  /**
-   * This method will block until the user presses enter
-   */
-  private void waitForUser() {
-    log(" >>>>>>>>>> Press Enter to Continue <<<<<<<<<<");
-    BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-    try {
-      reader.readLine();
-    } catch (Exception e) {
-      log("Error while waiting for user input: " + e.getMessage());
-      e.printStackTrace();
-    }
-  }
-
-  ///////////////////////////////////////////////////////////////////////////
-  ////////////////////////// Main Simulation Method /////////////////////////
-  ///////////////////////////////////////////////////////////////////////////
-
-  /**
-   * This is the main simulation loop. It can be thought of as the main method of
-   * the federate. For a description of the basic flow of this federate, see the
-   * class level comments
-   */
-  public void runFederate(String federateName) throws Exception {
-    /////////////////////////////////////////////////
-    // 1 & 2. create the RTIambassador and Connect //
-    /////////////////////////////////////////////////
-    log("Creating RTIambassador");
-    rtiamb = RtiFactoryFactory.getRtiFactory().getRtiAmbassador();
-    encoderFactory = RtiFactoryFactory.getRtiFactory().getEncoderFactory();
-
-    // connect
-    log("Connecting...");
-    fedamb = new CashBoxFederateAmbassador(this);
-    rtiamb.connect(fedamb, CallbackModel.HLA_EVOKED);
-
-    //////////////////////////////
-    // 3. create the federation //
-    //////////////////////////////
-    log("Creating Federation...");
-    // We attempt to create a new federation with the first three of the
-    // restaurant FOM modules covering processes, food and drink
-    try {
-      URL[] modules = new URL[]{
-          (new File("foms/Shop.xml")).toURI().toURL(),
-      };
-
-      rtiamb.createFederationExecution("ShopFederation", modules);
-      log("Created Federation");
-    } catch (FederationExecutionAlreadyExists exists) {
-      log("Didn't create federation, it already existed");
-    } catch (MalformedURLException urle) {
-      log("Exception loading one of the FOM modules from disk: " + urle.getMessage());
-      urle.printStackTrace();
-      return;
-    }
-
-    ////////////////////////////
-    // 4. join the federation //
-    ////////////////////////////
-
-    rtiamb.joinFederationExecution(federateName,            // name for the federate
-                                   "CashBox",   // federate type
-                                   "ShopFederation"     // name of federation
-    );           // modules we want to add
-
-    log("Joined Federation as " + federateName);
-
-    // cache the time factory for easy access
-    this.timeFactory = (HLAfloat64TimeFactory) rtiamb.getTimeFactory();
-
-    rtiamb.registerFederationSynchronizationPoint(READY_TO_RUN, null);
-    // wait until the point is announced
-    while (fedamb.isAnnounced == false) {
-      rtiamb.evokeMultipleCallbacks(0.1, 0.2);
-    }
-    waitForUser();
-    rtiamb.synchronizationPointAchieved(READY_TO_RUN);
-    log("Achieved sync point: " + READY_TO_RUN + ", waiting for federation...");
-    while (fedamb.isReadyToRun == false) {
-      rtiamb.evokeMultipleCallbacks(0.1, 0.2);
-    }
-
-    enableTimePolicy();
-    log("Time Policy Enabled");
-
-    publishAndSubscribe();
-    log("Published and Subscribed");
-
-    /////////////////////////////////////
-    // 10. do the main simulation loop //
-    /////////////////////////////////////
-    for (int i = 0; i < 5; i++) {
-      CashBox cb = new CashBox(CashBoxType.FAST);
-      CashBox.FASTS.add(cb);
-    }
-    for (int i = 0; i < 5; i++) {
-      CashBox cb = new CashBox(CashBoxType.STANDARD);
-      CashBox.STANDARDS.add(cb);
-    }
-    while (fedamb.isRunning && RUNNING) {
-      findLongestQueues();
-
-      // 9.3 request a time advance and wait until we get it
-      advanceTime(CashBox.TIME_TO_NEXT);
-      log("Time Advanced to " + fedamb.federateTime + "");
-    }
-
-
-    ////////////////////////////////////
-    // 12. resign from the federation //
-    ////////////////////////////////////
-    rtiamb.resignFederationExecution(ResignAction.DELETE_OBJECTS);
-    log("Resigned from Federation");
-
-    ////////////////////////////////////////
-    // 13. try and destroy the federation //
-    ////////////////////////////////////////
-    // NOTE: we won't die if we can't do this because other federates
-    //       remain. in that case we'll leave it for them to clean up
-    try {
-      rtiamb.destroyFederationExecution("ExampleFederation");
-      log("Destroyed Federation");
-    } catch (FederationExecutionDoesNotExist dne) {
-      log("No need to destroy federation, it doesn't exist");
-    } catch (FederatesCurrentlyJoined fcj) {
-      log("Didn't destroy federation, federates still joined");
-    }
-  }
-
-  private void publishCashBox(CashBox cb) throws ObjectClassNotPublished, ObjectClassNotDefined, SaveInProgress, RestoreInProgress, FederateNotExecutionMember, NotConnected, RTIinternalError, AttributeNotDefined, AttributeNotOwned, ObjectInstanceNotKnown {
-    ObjectInstanceHandle rtiCashBox = rtiamb.registerObjectInstance(cashBoxHandle);
-    AttributeHandleValueMap map = rtiamb.getAttributeHandleValueMapFactory().create(4);
-    map.put(cashBoxTypeHandle, encoderFactory.createHLAinteger32BE(cb.type.ordinal()).toByteArray());
-    map.put(cashBoxSpeedHandle, encoderFactory.createHLAinteger32BE(cb.speed).toByteArray());
-    map.put(cashBoxMaxLengthHandle, encoderFactory.createHLAinteger32BE(cb.maxLength).toByteArray());
-    map.put(cashBoxQueueLenHandle, encoderFactory.createHLAinteger32BE(cb.queueLen).toByteArray());
-    rtiamb.updateAttributeValues(rtiCashBox, map, generateTag());
-  }
-
-  private void findLongestQueues() {
-    System.out.println("\tNajwiększe kolejki:");
-    findLongestQueue(CashBox.FASTS);
-    findLongestQueue(CashBox.STANDARDS);
-  }
-
-  private void findLongestQueue(List<CashBox> list) {
-    AtomicInteger maximum = new AtomicInteger();
-    list.forEach(cashBox -> {
-      if (cashBox.getQueueLen() > maximum.get()) {
-        maximum.set(cashBox.getQueueLen());
-      }
-    });
-    System.out.println("\t\t" + list.get(0).type + " : " + maximum);
-  }
-
-  ////////////////////////////////////////////////////////////////////////////
-  ////////////////////////////// Helper Methods //////////////////////////////
-  ////////////////////////////////////////////////////////////////////////////
 
   /**
    * This method will attempt to enable the various time related properties for
@@ -273,21 +116,162 @@ public class CashBoxFederate {
   }
 
   /**
+   * This method will block until the user presses enter
+   */
+  private void waitForUser() {
+    log(" >>>>>>>>>> Press Enter to Continue <<<<<<<<<<");
+    BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+    try {
+      reader.readLine();
+    } catch (Exception e) {
+      log("Error while waiting for user input: " + e.getMessage());
+      e.printStackTrace();
+    }
+  }
+  ///////////////////////////////////////////////////////////////////////////
+  ////////////////////////// Main Simulation Method /////////////////////////
+  ///////////////////////////////////////////////////////////////////////////
+
+  /**
+   * This is the main simulation loop. It can be thought of as the main method of
+   * the federate. For a description of the basic flow of this federate, see the
+   * class level comments
+   */
+  public void runFederate(String federateName) throws Exception {
+    /////////////////////////////////////////////////
+    // 1 & 2. create the RTIambassador and Connect //
+    /////////////////////////////////////////////////
+    log("Creating RTIambassador");
+    rtiamb = RtiFactoryFactory.getRtiFactory().getRtiAmbassador();
+    encoderFactory = RtiFactoryFactory.getRtiFactory().getEncoderFactory();
+
+    // connect
+    log("Connecting...");
+    fedamb = new ClientFederateAmbassador(this);
+    rtiamb.connect(fedamb, CallbackModel.HLA_EVOKED);
+
+    //////////////////////////////
+    // 3. create the federation //
+    //////////////////////////////
+    log("Creating Federation...");
+    // We attempt to create a new federation with the first three of the
+    // restaurant FOM modules covering processes, food and drink
+    try {
+      URL[] modules = new URL[]{
+          (new File("foms/Shop.xml")).toURI().toURL(),
+      };
+
+      rtiamb.createFederationExecution("ShopFederation", modules);
+      log("Created Federation");
+    } catch (FederationExecutionAlreadyExists exists) {
+      log("Didn't create federation, it already existed");
+    } catch (MalformedURLException urle) {
+      log("Exception loading one of the FOM modules from disk: " + urle.getMessage());
+      urle.printStackTrace();
+      return;
+    }
+
+    ////////////////////////////
+    // 4. join the federation //
+    ////////////////////////////
+
+    rtiamb.joinFederationExecution(federateName,            // name for the federate
+        "client",   // federate type
+        "ShopFederation"     // name of federation
+    );           // modules we want to add
+
+    log("Joined Federation as " + federateName);
+
+    // cache the time factory for easy access
+    this.timeFactory = (HLAfloat64TimeFactory) rtiamb.getTimeFactory();
+
+    rtiamb.registerFederationSynchronizationPoint(READY_TO_RUN, null);
+    // wait until the point is announced
+    while (fedamb.isAnnounced == false) {
+      rtiamb.evokeMultipleCallbacks(0.1, 0.2);
+    }
+
+    waitForUser();
+
+    rtiamb.synchronizationPointAchieved(READY_TO_RUN);
+    log("Achieved sync point: " + READY_TO_RUN + ", waiting for federation...");
+    while (fedamb.isReadyToRun == false) {
+      rtiamb.evokeMultipleCallbacks(0.1, 0.2);
+    }
+
+    enableTimePolicy();
+    log("Time Policy Enabled");
+
+    publishAndSubscribe();
+    log("Published and Subscribed");
+
+    while (fedamb.isRunning) {
+      Client client = new Client(fedamb.federateTime);
+      CLIENTS.add(client);
+      System.out.println("\tStworzono klienta typu " + client.getType() +
+          " z produktami w liczbie: " + client.getProductsNumber());
+
+      ParameterHandleValueMap parameters = rtiamb.getParameterHandleValueMapFactory().create(1);
+
+      ParameterHandle typeHandle = rtiamb.getParameterHandle(addClientToQueueHandle, "type");
+      HLAinteger32BE typeValue = encoderFactory.createHLAinteger32BE(client.getType().ordinal());
+      parameters.put(typeHandle, typeValue.toByteArray());
+
+      rtiamb.sendInteraction(addClientToQueueHandle, parameters, generateTag());
+      advanceTime(client.generateTimeToNext());
+
+      Client client0 = CLIENTS.get(0);
+      int speed = client0.getType() == CashBoxType.STANDARD ? STANDARD_CASH_BOX_SPEED : FAST_CASH_BOX_SPEED;
+      if (client0.createTime + speed < fedamb.federateTime) {
+        parameters = rtiamb.getParameterHandleValueMapFactory().create(1);
+        typeHandle = rtiamb.getParameterHandle(customerOutHandle, "type");
+        typeValue = encoderFactory.createHLAinteger32BE(client0.getType().ordinal());
+        parameters.put(typeHandle, typeValue.toByteArray());
+
+        rtiamb.sendInteraction(customerOutHandle, parameters, generateTag());
+        CLIENTS.remove(0);
+      }
+      log("Time Advanced to " + fedamb.federateTime);
+    }
+
+    ////////////////////////////////////
+    // 12. resign from the federation //
+    ////////////////////////////////////
+    rtiamb.resignFederationExecution(ResignAction.DELETE_OBJECTS);
+    log("Resigned from Federation");
+
+    ////////////////////////////////////////
+    // 13. try and destroy the federation //
+    ////////////////////////////////////////
+    // NOTE: we won't die if we can't do this because other federates
+    //       remain. in that case we'll leave it for them to clean up
+    try {
+      rtiamb.destroyFederationExecution("ExampleFederation");
+      log("Destroyed Federation");
+    } catch (FederationExecutionDoesNotExist dne) {
+      log("No need to destroy federation, it doesn't exist");
+    } catch (FederatesCurrentlyJoined fcj) {
+      log("Didn't destroy federation, federates still joined");
+    }
+  }
+  ////////////////////////////////////////////////////////////////////////////
+  ////////////////////////////// Helper Methods //////////////////////////////
+  ////////////////////////////////////////////////////////////////////////////
+
+  /**
    * This method will inform the RTI about the types of data that the federate will
    * be creating, and the types of data we are interested in hearing about as other
    * federates produce it.
    */
   private void publishAndSubscribe() throws RTIexception {
-//	subscribe AddProducts Interaction
+//		publish AddProducts Interaction
     String iname = "HLAinteractionRoot.CustomerToQueue";
     addClientToQueueHandle = rtiamb.getInteractionClassHandle(iname);
-    addClientToQueueTypeHandle = rtiamb.getParameterHandle(addClientToQueueHandle, "type");
-    rtiamb.subscribeInteractionClass(addClientToQueueHandle);
+    rtiamb.publishInteractionClass(addClientToQueueHandle);
 
     iname = "HLAinteractionRoot.CustomerOut";
     customerOutHandle = rtiamb.getInteractionClassHandle(iname);
-    customerOutTypeHandle = rtiamb.getParameterHandle(customerOutHandle, "type");
-    rtiamb.subscribeInteractionClass(customerOutHandle);
+    rtiamb.publishInteractionClass(customerOutHandle);
   }
 
   /**
@@ -321,14 +305,14 @@ public class CashBoxFederate {
   //----------------------------------------------------------
   public static void main(String[] args) {
     // get a federate name, use "exampleFederate" as default
-    String federateName = "CashBox";
+    String federateName = "Client";
     if (args.length != 0) {
       federateName = args[0];
     }
 
     try {
       // run the example federate
-      new CashBoxFederate().runFederate(federateName);
+      new ClientFederate().runFederate(federateName);
     } catch (Exception rtie) {
       // an exception occurred, just log the information and exit
       rtie.printStackTrace();

@@ -12,20 +12,15 @@
  *   (that goes for your lawyer as well)
  *
  */
-package Consumer;
+package CashBox;
 
-import Producer.Client;
-import Producer.ClientFederate;
+import Client.ClientFederate;
 import hla.rti1516e.*;
 import hla.rti1516e.encoding.DecoderException;
 import hla.rti1516e.encoding.HLAinteger32BE;
 import hla.rti1516e.exceptions.FederateInternalError;
 import hla.rti1516e.time.HLAfloat64Time;
 import org.portico.impl.hla1516e.types.encoding.HLA1516eInteger32BE;
-
-import java.util.Objects;
-
-import static Producer.ClientFederate.CLIENTS;
 
 
 /**

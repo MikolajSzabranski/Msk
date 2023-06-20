@@ -1,4 +1,4 @@
-package Consumer;
+package CashBox;
 
 public enum CashBoxType {
   STANDARD,

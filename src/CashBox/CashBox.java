@@ -1,4 +1,4 @@
-package Consumer;
+package CashBox;
 
 import java.util.ArrayList;
 import java.util.Random;

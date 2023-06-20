@@ -12,10 +12,10 @@
  *   (that goes for your lawyer as well)
  *
  */
-package Producer;
+package Client;
 
-import Consumer.CashBox;
-import Consumer.CashBoxType;
+import CashBox.CashBox;
+import CashBox.CashBoxType;
 import hla.rti1516e.AttributeHandle;
 import hla.rti1516e.AttributeHandleValueMap;
 import hla.rti1516e.FederateHandleSet;

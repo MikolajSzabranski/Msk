@@ -1,6 +1,6 @@
-package Producer;
+package Client;
 
-import Consumer.CashBoxType;
+import CashBox.CashBoxType;
 
 import java.util.Random;
 
