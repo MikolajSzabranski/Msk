@@ -294,8 +294,9 @@ public class ClientFederateAmbassador extends NullFederateAmbassador {
 
     // print the handle
     builder.append(" handle=" + interactionClass);
-    if (interactionClass.equals(federate.addClientToQueueHandle)) {
-      builder.append(" (addProductsHandle)");
+    if (interactionClass.equals(federate.customerOutHandle)) {
+      builder.append(" (customerOutHandle)");
+
     }
 
     // print the tag

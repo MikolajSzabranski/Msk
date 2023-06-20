@@ -281,7 +281,6 @@ public class CashBoxFederateAmbassador extends NullFederateAmbassador {
     // print the handle
     builder.append(" handle=" + interactionClass);
     if (interactionClass.equals(federate.addClientToQueueHandle)) {
-//			builder.append( " (DrinkServed)" );
       byte[] bytes = theParameters.get(federate.addClientToQueueTypeHandle);
       HLAinteger32BE type = new HLA1516eInteger32BE();
       try {
@@ -310,33 +309,17 @@ public class CashBoxFederateAmbassador extends NullFederateAmbassador {
         });
       }
       selected.incQueue();
+    } else if (interactionClass.equals(federate.customerOutHandle)) {
+      byte[] bytes = theParameters.get(federate.customerOutTypeHandle);
+      HLAinteger32BE type = new HLA1516eInteger32BE();
+      try {
+        type.decode(bytes);
+      } catch (DecoderException e) {
+        e.printStackTrace();
+      }
+      int clientTypeValue = type.getValue();
+      CashBox.decQueues(clientTypeValue == 0 ? CashBoxType.STANDARD : CashBoxType.FAST);
     }
-
-//		// print the tag
-//		builder.append( ", tag=" + new String(tag) );
-//		// print the time (if we have it) we'll get null if we are just receiving
-//		// a forwarded call from the other reflect callback above
-//		if( time != null )
-//		{
-//			builder.append( ", time=" + ((HLAfloat64Time)time).getValue() );
-//		}
-//
-//		// print the parameer information
-//		builder.append( ", parameterCount=" + theParameters.size() );
-//		builder.append( "\n" );
-//		for( ParameterHandle parameter : theParameters.keySet() )
-//		{
-//			// print the parameter handle
-//			builder.append( "\tparamHandle=" );
-//			builder.append( parameter );
-//			// print the parameter value
-//			builder.append( ", paramValue=" );
-//			builder.append( theParameters.get(parameter).length );
-//			builder.append( " bytes" );
-//			builder.append( "\n" );
-//		}
-//
-//		log( builder.toString() );
   }
 
   @Override

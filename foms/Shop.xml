@@ -105,15 +105,15 @@
 				</parameter>
 			</interactionClass>
 			<interactionClass>
-				<name>CustomerPayment</name>
+				<name>CustomerOut</name>
 				<sharing>PublishSubscribe</sharing>
 				<transportation>HLAreliable</transportation>
 				<order>Receive</order>
-				<semantics>Zdarzenie płatności klienta</semantics>
+				<semantics>Zdarzenie obsługi klienta</semantics>
 				<parameter>
-					<name>payment</name>
-					<dataType>HLAstring</dataType>
-					<semantics>Sposób płatności klienta (gotówka)</semantics>
+					<name>type</name>
+					<dataType>HLAinteger32BE</dataType>
+					<semantics>Typ kas do wykonania obsługi</semantics>
 				</parameter>
 			</interactionClass>
 		</interactionClass>

@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class CashBox extends AtomicReference<CashBox> {
   public static int TIME_TO_NEXT = 1;
+  public int timeOf = 1;
   int queueLen;
   int speed;
   public CashBoxType type;
@@ -21,12 +22,14 @@ public class CashBox extends AtomicReference<CashBox> {
 
   public static ArrayList<CashBox> FASTS = new ArrayList<>();
   public static ArrayList<CashBox> STANDARDS = new ArrayList<>();
+  public static int STANDARD_CASH_BOX_SPEED = 20;
+  public static int FAST_CASH_BOX_SPEED = 10;
 
   public CashBox(CashBoxType type) {
     this.queueLen = 0;
     this.type = type;
-    this.maxLength = type == CashBoxType.STANDARD ? 15 : 10;
-    this.speed = type == CashBoxType.STANDARD ? 30000 : 10000;
+    this.maxLength = type == CashBoxType.STANDARD ? 10 : 5;
+    this.speed = type == CashBoxType.STANDARD ? STANDARD_CASH_BOX_SPEED : FAST_CASH_BOX_SPEED;
   }
 
   public CashBox() {
@@ -43,6 +46,31 @@ public class CashBox extends AtomicReference<CashBox> {
 //      System.out.println("Kolejka w jednej z kas typu " + type + " jest za długa(" + queueLen + ")");
       CashBoxFederate.RUNNING = false;
       throw new RuntimeException("Kolejka w jednej z kas typu " + type + " jest za długa(" + queueLen + ")");
+    }
+  }
+
+  static void decQueues(CashBoxType cashBoxType) {
+    if (CashBoxType.STANDARD == cashBoxType) {
+      STANDARDS.forEach(cashBox -> {
+        if (cashBox.queueLen > 0) {
+          cashBox.decQueue(cashBox);
+        }
+      });
+    } else {
+      FASTS.forEach(cashBox -> {
+        if (cashBox.queueLen > 0) {
+          cashBox.decQueue(cashBox);
+        }
+      });
+    }
+  }
+
+  public void decQueue(CashBox cashBox) {
+    if (queueLen > 0) {
+      queueLen--;
+      System.out.println("\tObsłużono klienta z kasy typu " + cashBox.type);
+    } else {
+      System.out.println("\tKolejka już była pusta więc nikogo nie obsłużono");
     }
   }
 

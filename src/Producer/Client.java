@@ -9,6 +9,7 @@ import java.util.Random;
  */
 public class Client {
   int productsNumber;
+  double createTime;
   CashBoxType type;
   public static int NEXT_CLIENT_APPEAR;
   private static final Random RANDOM = new Random();
@@ -16,6 +17,7 @@ public class Client {
   public Client(double currentTime) {
     this.productsNumber = generateRandom();
     this.type = productsNumber < 5 ? CashBoxType.FAST : CashBoxType.STANDARD;
+    this.createTime = currentTime;
     NEXT_CLIENT_APPEAR = (int) (generateRandom() + currentTime);
   }
 
