@@ -185,47 +185,70 @@ public class CashBoxFederateAmbassador extends NullFederateAmbassador
 		// print the attribute information
 		builder.append( ", attributeCount=" + theAttributes.size() );
 		builder.append( "\n" );
-		for( AttributeHandle attributeHandle : theAttributes.keySet() )
-		{
+		for (AttributeHandle attributeHandle : theAttributes.keySet()) {
 			// print the attibute handle
-			builder.append( "\tattributeHandle=" );
-
+			builder.append("\tattributeHandle=");
+			CashBox cashBox = new CashBox();
 			// if we're dealing with Flavor, decode into the appropriate enum value
-			if( attributeHandle.equals(federate.storageAvailableHandle) )
-			{
-				builder.append( attributeHandle );
-				builder.append( " (Available)    " );
-				builder.append( ", attributeValue=" );
-				HLAinteger32BE available = new HLA1516eInteger32BE();
+			if (attributeHandle.equals(federate.cashBoxTypeHandle)) {
+				builder.append(attributeHandle);
+				builder.append(" (cashBoxTypeHandle)    ");
+				builder.append(", attributeValue=");
+				HLAinteger32BE type = new HLA1516eInteger32BE();
 				try {
-					available.decode(theAttributes.get(attributeHandle));
+					type.decode(theAttributes.get(attributeHandle));
 				} catch (DecoderException e) {
 					e.printStackTrace();
 				}
-				builder.append( available.getValue() );
-				federate.storageAvailable = available.getValue();
-			}
-			else if( attributeHandle.equals(federate.storageMaxHandle) )
-			{
-				builder.append( attributeHandle );
-				builder.append( " (Max)" );
-				builder.append( ", attributeValue=" );
-				HLAinteger32BE max = new HLA1516eInteger32BE();
+				builder.append(type.getValue());
+				cashBox.setType(type.getValue());
+			} else if (attributeHandle.equals(federate.cashBoxSpeedHandle)) {
+				builder.append(attributeHandle);
+				builder.append(" (cashBoxSpeedHandle)");
+				builder.append(", attributeValue=");
+				HLAinteger32BE speed = new HLA1516eInteger32BE();
 				try {
-					max.decode(theAttributes.get(attributeHandle));
+					speed.decode(theAttributes.get(attributeHandle));
 				} catch (DecoderException e) {
 					e.printStackTrace();
 				}
-				builder.append( max.getValue() );
-				federate.storageMax = max.getValue();
+				builder.append(speed.getValue());
+				cashBox.setSpeed(speed.getValue());
+//        federate.storageMax = speed.getValue();
+			} else if (attributeHandle.equals(federate.cashBoxMaxLengthHandle)) {
+				builder.append(attributeHandle);
+				builder.append(" (cashBoxMaxLengthHandle)");
+				builder.append(", attributeValue=");
+				HLAinteger32BE maxLen = new HLA1516eInteger32BE();
+				try {
+					maxLen.decode(theAttributes.get(attributeHandle));
+				} catch (DecoderException e) {
+					e.printStackTrace();
+				}
+				builder.append(maxLen.getValue());
+				cashBox.setMaxLength(maxLen.getValue());
+			} else if (attributeHandle.equals(federate.cashBoxQueueLenHandle)) {
+				builder.append(attributeHandle);
+				builder.append(" (cashBoxQueueLenHandle)");
+				builder.append(", attributeValue=");
+				HLAinteger32BE len = new HLA1516eInteger32BE();
+				try {
+					len.decode(theAttributes.get(attributeHandle));
+				} catch (DecoderException e) {
+					e.printStackTrace();
+				}
+				builder.append(len.getValue());
+				cashBox.setQueueLen(len.getValue());
+			} else {
+				builder.append(attributeHandle);
+				builder.append(" (Unknown)   ");
 			}
-			else
-			{
-				builder.append( attributeHandle );
-				builder.append( " (Unknown)   " );
+			if (cashBox.type == CashBoxType.STANDARD){
+				CashBox.STANDARDS.add(cashBox);
+			} else {
+				CashBox.FASTS.add(cashBox);
 			}
-			
-			builder.append( "\n" );
+			builder.append("\n");
 		}
 		
 		log( builder.toString() );

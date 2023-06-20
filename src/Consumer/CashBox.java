@@ -29,14 +29,19 @@ public class CashBox extends AtomicReference<CashBox> {
     this.speed = type == CashBoxType.STANDARD ? 30000 : 10000;
   }
 
+  public CashBox() {
+  }
+
   public int getQueueLen() {
     return queueLen;
   }
 
   public void incQueue() {
     queueLen++;
-    if (queueLen > maxLength){
-      System.out.println(("Kolejka w jednej z kas typu " + type + "jest za długa"));
+    maxLength = type == CashBoxType.STANDARD ? 15 : 10;
+    if (queueLen > maxLength) {
+      System.out.println(("Kolejka w jednej z kas typu " + type + " jest za długa"));
+      System.out.println("Długość tej kolejki to: " + queueLen);
       throw new RuntimeException();
     }
   }
@@ -54,5 +59,29 @@ public class CashBox extends AtomicReference<CashBox> {
 
   private int generateTimeToNext() {
     return RANDOM.nextInt(10) + 1;
+  }
+
+  public static void setTimeToNext(int timeToNext) {
+    TIME_TO_NEXT = timeToNext;
+  }
+
+  public void setQueueLen(int queueLen) {
+    this.queueLen = queueLen;
+  }
+
+  public void setSpeed(int speed) {
+    this.speed = speed;
+  }
+
+  public void setType(CashBoxType type) {
+    this.type = type;
+  }
+
+  public void setType(int type) {
+    this.type = type == 0 ? CashBoxType.STANDARD : CashBoxType.FAST;
+  }
+
+  public void setMaxLength(int maxLength) {
+    this.maxLength = maxLength;
   }
 }
