@@ -99,9 +99,9 @@
 				<order>Receive</order>
 				<semantics>Zdarzenie ustawienia się w kolejce do kasy</semantics>
 				<parameter>
-					<name>productsNumber</name>
+					<name>type</name>
 					<dataType>HLAinteger32BE</dataType>
-					<semantics>Liczba produktow w koszyku</semantics>
+					<semantics>Typ kasy docelowej</semantics>
 				</parameter>
 			</interactionClass>
 			<interactionClass>

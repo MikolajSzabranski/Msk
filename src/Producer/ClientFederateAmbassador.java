@@ -35,7 +35,6 @@ import hla.rti1516e.exceptions.FederateInternalError;
 import hla.rti1516e.time.HLAfloat64Time;
 import org.portico.impl.hla1516e.types.encoding.HLA1516eInteger32BE;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 
 /**
@@ -295,7 +294,7 @@ public class ClientFederateAmbassador extends NullFederateAmbassador {
 
     // print the handle
     builder.append(" handle=" + interactionClass);
-    if (interactionClass.equals(federate.addClientToQueue)) {
+    if (interactionClass.equals(federate.addClientToQueueHandle)) {
       builder.append(" (addProductsHandle)");
     }
 

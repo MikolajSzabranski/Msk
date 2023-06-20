@@ -14,10 +14,8 @@
  */
 package Consumer;
 
-import Producer.Client;
 import hla.rti1516e.*;
 import hla.rti1516e.encoding.EncoderFactory;
-import hla.rti1516e.encoding.HLAinteger32BE;
 import hla.rti1516e.exceptions.*;
 import hla.rti1516e.time.HLAfloat64Interval;
 import hla.rti1516e.time.HLAfloat64Time;
@@ -28,12 +26,8 @@ import java.io.File;
 import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import static Producer.ClientFederate.CLIENTS;
 
 
 public class CashBoxFederate {
@@ -53,6 +47,8 @@ public class CashBoxFederate {
   // caches of handle types - set once we join a federation
   protected ObjectClassHandle storageHandle;
   protected ObjectClassHandle customerHandle;
+  protected InteractionClassHandle addClientToQueueHandle;
+  protected ParameterHandle addClientToQueueTypeHandle;
   protected AttributeHandle customerTypeHandle;
   protected AttributeHandle productsNumberHandle2;
   protected ObjectClassHandle cashBoxHandle;
@@ -64,7 +60,7 @@ public class CashBoxFederate {
   protected ParameterHandle productsNumberHandle;
   protected AttributeHandle storageAvailableHandle;
   protected InteractionClassHandle getClientToQueueHandle;
-
+  public static boolean RUNNING = true;
   protected int storageMax = 0;
   protected int storageAvailable = 0;
   //----------------------------------------------------------
@@ -204,14 +200,14 @@ public class CashBoxFederate {
     for (int i = 0; i < 5; i++) {
       CashBox cb = new CashBox(CashBoxType.FAST);
       CashBox.FASTS.add(cb);
-      publishCashBox(cb);
+//      publishCashBox(cb);
     }
     for (int i = 0; i < 5; i++) {
       CashBox cb = new CashBox(CashBoxType.STANDARD);
       CashBox.STANDARDS.add(cb);
-      publishCashBox(cb);
+//      publishCashBox(cb);
     }
-    while (fedamb.isRunning) {
+    while (fedamb.isRunning && RUNNING) {
 //			int consumed = cashBox.consume();
 //			if(storageAvailable - consumed >= 0 ) {
 //				ParameterHandleValueMap parameterHandleValueMap = rtiamb.getParameterHandleValueMapFactory().create(1);
@@ -226,33 +222,7 @@ public class CashBoxFederate {
 //			}
 
 
-      if (fedamb.federateTime >= Client.NEXT_CLIENT_APPEAR) {
-        CLIENTS.add(new Client(fedamb.federateTime));
-      }
-      if (!CLIENTS.isEmpty()) {
-        Client client = CLIENTS.get(0);
-        CashBox selected;
-        if (Objects.equals(client.getType(), CashBoxType.STANDARD) && !CashBox.STANDARDS.isEmpty()) {
-          selected = CashBox.STANDARDS.get(0);
-          int max = selected.getMaxLength();
-          CashBox.STANDARDS.forEach(cashBox -> {
-            if (cashBox.getQueueLen() < max) {
-              selected.set(cashBox);
-            }
-          });
-          selected.incQueue();
-        } else if (!CashBox.FASTS.isEmpty()) {
-          selected = CashBox.FASTS.get(0);
-          int max = selected.getMaxLength();
-          CashBox.FASTS.forEach(cashBox -> {
-            if (cashBox.getQueueLen() < max) {
-              selected.set(cashBox);
-            }
-          });
-          selected.incQueue();
-        }
-        CLIENTS.remove(0);
-      }
+
       doUpdateCashBoxes();
 
       // 9.3 request a time advance and wait until we get it
@@ -301,27 +271,27 @@ public class CashBoxFederate {
   private void updateCashBoxes(List<CashBox> list) {
     AtomicInteger maximum = new AtomicInteger();
     list.forEach(cashBox -> {
-      AttributeHandleValueMap attributes = null;
-      try {
-        attributes = rtiamb.getAttributeHandleValueMapFactory().create(1);
-      } catch (FederateNotExecutionMember | NotConnected e) {
-        throw new RuntimeException(e);
-      }
+//      AttributeHandleValueMap attributes = null;
+//      try {
+//        attributes = rtiamb.getAttributeHandleValueMapFactory().create(1);
+//      } catch (FederateNotExecutionMember | NotConnected e) {
+//        throw new RuntimeException(e);
+//      }
 
       if (cashBox.getQueueLen() > maximum.get()) {
         maximum.set(cashBox.getQueueLen());
       }
-      HLAinteger32BE cashBoxQueueLenValue = encoderFactory.createHLAinteger32BE(cashBox.getQueueLen());
-      attributes.put(cashBoxQueueLenHandle, cashBoxQueueLenValue.toByteArray());
-      ObjectInstanceHandle rtiCashBox = null;
-      try {
-        rtiCashBox = rtiamb.registerObjectInstance(cashBoxHandle);
-        rtiamb.updateAttributeValues(rtiCashBox, attributes, generateTag());
-      } catch (ObjectClassNotPublished | ObjectClassNotDefined | SaveInProgress | RestoreInProgress |
-               FederateNotExecutionMember | NotConnected | RTIinternalError | AttributeNotDefined | AttributeNotOwned |
-               ObjectInstanceNotKnown e) {
-        throw new RuntimeException(e);
-      }
+//      HLAinteger32BE cashBoxQueueLenValue = encoderFactory.createHLAinteger32BE(cashBox.getQueueLen());
+//      attributes.put(cashBoxQueueLenHandle, cashBoxQueueLenValue.toByteArray());
+//      ObjectInstanceHandle rtiCashBox = null;
+//      try {
+//        rtiCashBox = rtiamb.registerObjectInstance(cashBoxHandle);
+//        rtiamb.updateAttributeValues(rtiCashBox, attributes, generateTag());
+//      } catch (ObjectClassNotPublished | ObjectClassNotDefined | SaveInProgress | RestoreInProgress |
+//               FederateNotExecutionMember | NotConnected | RTIinternalError | AttributeNotDefined | AttributeNotOwned |
+//               ObjectInstanceNotKnown e) {
+//        throw new RuntimeException(e);
+//      }
     });
     System.out.println("\t\t" + list.get(0).type + " : " + maximum);
   }
@@ -369,28 +339,34 @@ public class CashBoxFederate {
    */
   private void publishAndSubscribe() throws RTIexception {
     // publish self
-    this.cashBoxHandle = rtiamb.getObjectClassHandle("HLAobjectRoot.CashRegister");
-    this.cashBoxTypeHandle = rtiamb.getAttributeHandle(cashBoxHandle, "type");
-    this.cashBoxSpeedHandle = rtiamb.getAttributeHandle(cashBoxHandle, "speed");
-    this.cashBoxMaxLengthHandle = rtiamb.getAttributeHandle(cashBoxHandle, "maxLength");
-    this.cashBoxQueueLenHandle = rtiamb.getAttributeHandle(cashBoxHandle, "queueLen");
-    // package the information into a handle set
-    AttributeHandleSet attributes = rtiamb.getAttributeHandleSetFactory().create();
-    attributes.add(cashBoxTypeHandle);
-    attributes.add(cashBoxSpeedHandle);
-    attributes.add(cashBoxMaxLengthHandle);
-    attributes.add(cashBoxQueueLenHandle);
-    rtiamb.publishObjectClassAttributes(cashBoxHandle, attributes);
+//    this.cashBoxHandle = rtiamb.getObjectClassHandle("HLAobjectRoot.CashRegister");
+//    this.cashBoxTypeHandle = rtiamb.getAttributeHandle(cashBoxHandle, "type");
+//    this.cashBoxSpeedHandle = rtiamb.getAttributeHandle(cashBoxHandle, "speed");
+//    this.cashBoxMaxLengthHandle = rtiamb.getAttributeHandle(cashBoxHandle, "maxLength");
+//    this.cashBoxQueueLenHandle = rtiamb.getAttributeHandle(cashBoxHandle, "queueLen");
+//    // package the information into a handle set
+//    AttributeHandleSet attributes = rtiamb.getAttributeHandleSetFactory().create();
+//    attributes.add(cashBoxTypeHandle);
+//    attributes.add(cashBoxSpeedHandle);
+//    attributes.add(cashBoxMaxLengthHandle);
+//    attributes.add(cashBoxQueueLenHandle);
+//    rtiamb.publishObjectClassAttributes(cashBoxHandle, attributes);
+//
+//    //subscribe cashbox
+//    this.customerHandle = rtiamb.getObjectClassHandle("HLAobjectRoot.Customer");
+//    this.customerTypeHandle = rtiamb.getAttributeHandle(customerHandle, "type");
+//    this.productsNumberHandle2 = rtiamb.getAttributeHandle(customerHandle, "products");
+//    // package the information into a handle set
+//    AttributeHandleSet attributes2 = rtiamb.getAttributeHandleSetFactory().create();
+//    attributes2.add(customerTypeHandle);
+//    attributes2.add(productsNumberHandle2);
+//    rtiamb.subscribeObjectClassAttributes(customerHandle, attributes2);
 
-    //subscribe cashbox
-    this.customerHandle = rtiamb.getObjectClassHandle("HLAobjectRoot.Customer");
-    this.customerTypeHandle = rtiamb.getAttributeHandle(customerHandle, "type");
-    this.productsNumberHandle2 = rtiamb.getAttributeHandle(customerHandle, "products");
-    // package the information into a handle set
-    AttributeHandleSet attributes2 = rtiamb.getAttributeHandleSetFactory().create();
-    attributes2.add(customerTypeHandle);
-    attributes2.add(productsNumberHandle2);
-    rtiamb.subscribeObjectClassAttributes(customerHandle, attributes2);
+//	subscribe AddProducts Interaction
+    String iname = "HLAinteractionRoot.CustomerToQueue";
+    addClientToQueueHandle = rtiamb.getInteractionClassHandle(iname);
+    addClientToQueueTypeHandle = rtiamb.getParameterHandle(addClientToQueueHandle, "type");
+    rtiamb.subscribeInteractionClass(addClientToQueueHandle);
 
     //subscribe
 //    String iname = "HLAinteractionRoot.CustomerToQueue";

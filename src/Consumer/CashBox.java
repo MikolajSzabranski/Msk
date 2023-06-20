@@ -40,9 +40,9 @@ public class CashBox extends AtomicReference<CashBox> {
     queueLen++;
     maxLength = type == CashBoxType.STANDARD ? 15 : 10;
     if (queueLen > maxLength) {
-      System.out.println(("Kolejka w jednej z kas typu " + type + " jest za długa"));
-      System.out.println("Długość tej kolejki to: " + queueLen);
-      throw new RuntimeException();
+//      System.out.println("Kolejka w jednej z kas typu " + type + " jest za długa(" + queueLen + ")");
+      CashBoxFederate.RUNNING = false;
+      throw new RuntimeException("Kolejka w jednej z kas typu " + type + " jest za długa(" + queueLen + ")");
     }
   }
 

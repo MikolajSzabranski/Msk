@@ -62,7 +62,7 @@ public class ClientFederate {
   protected AttributeHandle cashBoxMaxLengthHandle;
   protected AttributeHandle cashBoxQueueLenHandle;
   protected AttributeHandle cashBoxAvailableHandle;
-  protected InteractionClassHandle addClientToQueue;
+  protected InteractionClassHandle addClientToQueueHandle;
 
   protected int storageMax = 0;
   protected int storageAvailable = 0;
@@ -228,55 +228,59 @@ public class ClientFederate {
     publishAndSubscribe();
     log("Published and Subscribed");
 
-    ObjectInstanceHandle objectHandle = rtiamb.registerObjectInstance(customerHandle);
-    log("Registered Client, handle=" + objectHandle);
+//    ObjectInstanceHandle objectHandle = rtiamb.registerObjectInstance(customerHandle);
+//    log("Registered Client, handle=" + objectHandle);
 //		// 10. do the main simulation loop //
     /////////////////////////////////////
     // here is where we do the meat of our work. in each iteration, we will
     // update the attribute values of the object we registered, and will
     // send an interaction.
 
-    CLIENTS.add(new Client(fedamb.federateTime));
-    Client client = null;
+//    CLIENTS.add(new Client(fedamb.federateTime));
+//    Client client = null;
     while (fedamb.isRunning) {
-      if (fedamb.federateTime >= Client.NEXT_CLIENT_APPEAR) {
-        CLIENTS.add(new Client(fedamb.federateTime));
-      }
-      if (!CLIENTS.isEmpty()) {
-        client = CLIENTS.get(0);
-        CashBox selected;
-        if (Objects.equals(client.type, CashBoxType.STANDARD) && !CashBox.STANDARDS.isEmpty()) {
-          selected = CashBox.STANDARDS.get(0);
-          int max = selected.getMaxLength();
-          CashBox.STANDARDS.forEach(cashBox -> {
-            if (cashBox.getQueueLen() < max) {
-              selected.set(cashBox);
-            }
-          });
-          selected.incQueue();
-        } else if (!CashBox.FASTS.isEmpty()) {
-          selected = CashBox.FASTS.get(0);
-          int max = selected.getMaxLength();
-          CashBox.FASTS.forEach(cashBox -> {
-            if (cashBox.getQueueLen() < max) {
-              selected.set(cashBox);
-            }
-          });
-          selected.incQueue();
-        }
-        CLIENTS.remove(0);
-      }
+      Client client = new Client(fedamb.federateTime);
+      System.out.println("Stworzono klienta typu " + client.getType() + " z produktami w liczbie: " + client.getProductsNumber());
+//      CLIENTS.add();
+//      if (fedamb.federateTime >= Client.NEXT_CLIENT_APPEAR) {
+//      }
+//      if (!CLIENTS.isEmpty()) {
+//        client = CLIENTS.get(0);
+//        CashBox selected;
+//        if (Objects.equals(client.type, CashBoxType.STANDARD) && !CashBox.STANDARDS.isEmpty()) {
+//          selected = CashBox.STANDARDS.get(0);
+//          int max = selected.getMaxLength();
+//          CashBox.STANDARDS.forEach(cashBox -> {
+//            if (cashBox.getQueueLen() < max) {
+//              selected.set(cashBox);
+//            }
+//          });
+//          selected.incQueue();
+//        } else if (!CashBox.FASTS.isEmpty()) {
+//          selected = CashBox.FASTS.get(0);
+//          int max = selected.getMaxLength();
+//          CashBox.FASTS.forEach(cashBox -> {
+//            if (cashBox.getQueueLen() < max) {
+//              selected.set(cashBox);
+//            }
+//          });
+//          selected.incQueue();
+//        }
+//        CLIENTS.remove(0);
+//      }
       // update ProductsStorage parameters max and available to current values
-      AttributeHandleValueMap attributes = rtiamb.getAttributeHandleValueMapFactory().create(2);
+      ParameterHandleValueMap parameters = rtiamb.getParameterHandleValueMapFactory().create(1);
 
-      HLAinteger32BE productsNumberValue = encoderFactory.createHLAinteger32BE(client.getProductsNumber());
-      attributes.put(productsNumberHandle, productsNumberValue.toByteArray());
+      ParameterHandle typeHandle = rtiamb.getParameterHandle(addClientToQueueHandle, "type");
+      HLAinteger32BE typeValue = encoderFactory.createHLAinteger32BE(client.getType().ordinal());
+      parameters.put(typeHandle, typeValue.toByteArray());
 
 //			HLAASCIIstring typeValue = encoderFactory.createHLAASCIIstring(client.getTypeToString());
 //			attributes.put(cashBoxTypeHandle, typeValue.toByteArray());
 
-      rtiamb.updateAttributeValues(objectHandle, attributes, generateTag());
-      advanceTime(1);
+//      rtiamb.updateAttributeValues(objectHandle, parameters, generateTag());
+      rtiamb.sendInteraction(addClientToQueueHandle, parameters, generateTag());
+      advanceTime(client.generateTimeToNext());
       log("Time Advanced to " + fedamb.federateTime);
 
 
@@ -322,35 +326,34 @@ public class ClientFederate {
    */
   private void publishAndSubscribe() throws RTIexception {
     // publish self
-    this.customerHandle = rtiamb.getObjectClassHandle("HLAobjectRoot.Customer");
-    this.customerTypeHandle = rtiamb.getAttributeHandle(customerHandle, "type");
-    this.productsNumberHandle = rtiamb.getAttributeHandle(customerHandle, "products");
-    // package the information into a handle set
-    AttributeHandleSet attributes = rtiamb.getAttributeHandleSetFactory().create();
-    attributes.add(customerTypeHandle);
-    attributes.add(productsNumberHandle);
-    rtiamb.publishObjectClassAttributes(customerHandle, attributes);
+//    this.customerHandle = rtiamb.getObjectClassHandle("HLAobjectRoot.Customer");
+//    this.customerTypeHandle = rtiamb.getAttributeHandle(customerHandle, "type");
+//    this.productsNumberHandle = rtiamb.getAttributeHandle(customerHandle, "products");
+//    // package the information into a handle set
+//    AttributeHandleSet attributes = rtiamb.getAttributeHandleSetFactory().create();
+//    attributes.add(customerTypeHandle);
+//    attributes.add(productsNumberHandle);
+//    rtiamb.publishObjectClassAttributes(customerHandle, attributes);
 
-    //subscribe cashbox
-    this.cashBoxHandle = rtiamb.getObjectClassHandle("HLAobjectRoot.CashRegister");
-    this.cashBoxTypeHandle = rtiamb.getAttributeHandle(cashBoxHandle, "type");
-    this.cashBoxSpeedHandle = rtiamb.getAttributeHandle(cashBoxHandle, "speed");
-    this.cashBoxMaxLengthHandle = rtiamb.getAttributeHandle(cashBoxHandle, "maxLength");
-    this.cashBoxQueueLenHandle = rtiamb.getAttributeHandle(cashBoxHandle, "queueLen");
-    // package the information into a handle set
-    AttributeHandleSet attributes2 = rtiamb.getAttributeHandleSetFactory().create();
-    attributes2.add(cashBoxTypeHandle);
-    attributes2.add(cashBoxSpeedHandle);
-    attributes2.add(cashBoxMaxLengthHandle);
-    attributes2.add(cashBoxQueueLenHandle);
-    rtiamb.subscribeObjectClassAttributes(cashBoxHandle, attributes2);
+
+//    //subscribe cashbox
+//    this.cashBoxHandle = rtiamb.getObjectClassHandle("HLAobjectRoot.CashRegister");
+//    this.cashBoxTypeHandle = rtiamb.getAttributeHandle(cashBoxHandle, "type");
+//    this.cashBoxSpeedHandle = rtiamb.getAttributeHandle(cashBoxHandle, "speed");
+//    this.cashBoxMaxLengthHandle = rtiamb.getAttributeHandle(cashBoxHandle, "maxLength");
+//    this.cashBoxQueueLenHandle = rtiamb.getAttributeHandle(cashBoxHandle, "queueLen");
+//    // package the information into a handle set
+//    AttributeHandleSet attributes2 = rtiamb.getAttributeHandleSetFactory().create();
+//    attributes2.add(cashBoxTypeHandle);
+//    attributes2.add(cashBoxSpeedHandle);
+//    attributes2.add(cashBoxMaxLengthHandle);
+//    attributes2.add(cashBoxQueueLenHandle);
+//    rtiamb.subscribeObjectClassAttributes(cashBoxHandle, attributes2);
 
 //		publish AddProducts Interaction
     String iname = "HLAinteractionRoot.CustomerToQueue";
-    addClientToQueue = rtiamb.getInteractionClassHandle(iname);
-    // do the publication
-    rtiamb.publishInteractionClass(addClientToQueue);
-
+    addClientToQueueHandle = rtiamb.getInteractionClassHandle(iname);
+    rtiamb.publishInteractionClass(addClientToQueueHandle);
   }
 
   /**
